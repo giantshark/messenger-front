@@ -66,10 +66,12 @@ var app = new Vue({
         },
 
         sendMessage() {
-            socket.emit('web-messenger', { 
-                sender: this.chatName,
-                message: this.newMessage 
-            })
+            if (this.chatName && this.newMessage ) {
+                socket.emit('web-messenger', { 
+                    sender: this.chatName,
+                    message: this.newMessage 
+                })
+            }
 
             this.newMessage = ''
 
