@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Web Messenger</title>
+  <script src="https://unpkg.com/vue"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.0.4/socket.io.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.17.1/axios.min.js"></script>
+  <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet" />
+
+  <style>
+  .chat {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .chat li {
+    margin-bottom: 10px;
+    padding-bottom: 5px;
+    border-bottom: 1px dotted #B3A9A9;
+  }
+
+  .chat li .chat-body p {
+    margin: 0;
+    color: #777777;
+  }
+
+  .chat-box {
+    overflow-y: scroll;
+    height: 350px;
+  }
+
+  .chat-box::-webkit-scrollbar-track {
+    -webkit-box-shadow: inset 0 0 6px rgba(0,0,0,0.3);
+    background-color: #F5F5F5;
+  }
+
+  .chat-box::-webkit-scrollbar {
+    width: 12px;
+    background-color: #F5F5F5;
+  }
+
+  .chat-box::-webkit-scrollbar-thumb {
+    -webkit-box-shadow: inset 0 0 6px rgba(0,0,0,.3);
+    background-color: #555;
+  }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <div class="container">
+      <div class="row">
+          <div class="col-md-6 col-md-offset-2">
+              <h3>Web Messenger</h3>
+              <hr>
+              <div class="panel panel-default">
+                  <div class="panel-heading">Chats: {{ chatName }}</div>
+                  <div class="panel-body chat-box">
+                    <ul class="chat">
+                        <li class="left clearfix" v-for="message in messages">
+                            <div class="chat-body clearfix">
+                                <div class="header">
+                                    <strong class="primary-font">
+                                        {{ message.sender }}
+                                    </strong>
+                                </div>
+                                <p>
+                                    {{ message.message }}
+                                </p>
+                            </div>
+                        </li>
+                    </ul>
+                  </div>
+                  <div class="panel-footer">
+                    <div class="input-group">
+                      <input id="btn-input" type="text" name="message" class="form-control input-sm" placeholder="message" v-model="newMessage" @keyup.enter="sendMessage">
+                      <span class="input-group-btn">
+                          <button class="btn btn-primary btn-sm" id="btn-chat" @click="sendMessage">
+                              Send
+                          </button>
+                      </span>
+                    </div>
+                  </div>
+              </div>
+          </div>
+      </div>
+    </div>
+    <!-- Display name model -->
+    <div class="modal fade" tabindex="-1" role="dialog" id="chat-name-modal">
+        <div class="modal-dialog" role="document">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h4 class="modal-title">Dispay name</h4>
+            </div>
+            <div class="modal-body">
+              <input type="text" class="form-control" placeholder="your name..." v-model="chatName"/>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-primary" @click="confirmDisplayName">Confirm</button>
+            </div>
+          </div>
+        </div>
+      </div>
+  </div>
+  <script>
+    var socket = io.connect('http://localhost:3000');  
+
+    var app = new Vue({
+        el: '#app',
+
+        props: {
+            apiUrl: {
+                type: String,
+                default() {
+                    return 'http://localhost:3000/api'
+                }
+            },
+            chatName: {
+                type: String,
+                default() {
+                    return ''
+                }
+            }
+        },       
+
+        data() {
+            return {
+                messages: [],
+                newMessage: ''
+            }
+        },
+
+        created() {
+            this.generateChatName()
+        },
+
+        mounted () {
+            socket.on('web-messenger', (msg) => {
+                this.messages.push({
+                    sender: msg.sender,
+                    message: msg.message 
+                })
+            });
+
+            $('#chat-name-modal').modal({
+                backdrop: 'static',
+                keyboard: false
+            })
+        },
+
+        methods: {
+            generateChatName() {
+                this.chatName = 'u' + Math.floor(Math.random() * 10000) + 1
+            },
+
+            fetchMessages() {
+                axios.get(this.apiUrl+'/messages')
+                .then((response) => {
+                    this.messages = response.data.response;
+                })
+                .catch(function(err) {
+                    
+                })
+            },
+
+            confirmDisplayName() {
+                if (this.chatName.trim() != '') {
+                    $('#chat-name-modal').modal('hide')
+                    this.fetchMessages();
+                }
+            },
+
+            sendMessage() {
+                socket.emit('web-messenger', { 
+                    sender: this.chatName,
+                    message: this.newMessage 
+                })
+
+                this.newMessage = ''
+
+                var scrollTo_int = $('.chat-box').prop('scrollHeight') + 'px'
+                $('.chat-box').animate({scrollTop: scrollTo_int})
+            }
+        }
+    })
+  </script>
+</body>
+</html>
